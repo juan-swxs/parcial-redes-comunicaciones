@@ -260,10 +260,12 @@ archivo CSV como si fuera una tabla:
 ```bash
 git clone https://github.com/juan-swxs/parcial-redes-comunicaciones.git
 cd parcial-redes-comunicaciones
-cp .env.example .env
-docker compose up -d
+docker compose up -d     # no requiere .env: las credenciales tienen valores por defecto
 docker compose ps        # esperar a que los 5 servicios estén "healthy"
 ```
+
+El paso `cp .env.example .env` del enunciado es opcional: si se ejecuta, el `.env`
+resultante contiene los mismos valores que los predeterminados de `docker-compose.yml`.
 
 1. **Abrir el portal Joomla a través de Nginx y generar tráfico**
    - Abrir <http://localhost/>. La portada ya trae contenido: un banner, 7 artículos sobre

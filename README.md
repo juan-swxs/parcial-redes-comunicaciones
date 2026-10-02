@@ -30,12 +30,18 @@ sudo usermod -aG docker $USER   # cierra sesión y vuelve a entrar para que apli
 ```bash
 git clone https://github.com/juan-swxs/parcial-redes-comunicaciones.git
 cd parcial-redes-comunicaciones
-cp .env.example .env
 docker compose up -d
 ```
 
-Eso es todo. No hay que crear datasources o dashboards en Grafana ni subir el notebook:
-todo queda provisionado por los archivos del repositorio.
+Eso es todo. **No hace falta crear ni copiar el archivo `.env`**: `docker-compose.yml`
+trae como valor por defecto cada credencial (`${VARIABLE:-valor}`), con los mismos valores
+de `.env.example`. Tampoco hay que crear datasources o dashboards en Grafana ni subir el
+notebook: todo queda provisionado por los archivos del repositorio.
+
+> ¿Quieres otras credenciales? Copia `.env.example` a `.env`, edítalo y ejecuta
+> `docker compose up -d`. Los valores de `.env` tienen prioridad sobre los de por defecto.
+> El flujo del enunciado (`cp .env.example .env` y luego `docker compose up -d`) también
+> funciona igual.
 
 El primer arranque descarga las imágenes y construye la de Jupyter (2–4 min). Joomla
 necesita ~1 min más para instalarse contra PostgreSQL. Comprueba que los 5 servicios
@@ -53,7 +59,6 @@ Funciona igual con **Docker Desktop** (en Windows, con el backend WSL 2 activado
 ```powershell
 git clone https://github.com/juan-swxs/parcial-redes-comunicaciones.git
 cd parcial-redes-comunicaciones
-copy .env.example .env          # en PowerShell también sirve: Copy-Item .env.example .env
 docker compose up -d
 ```
 
@@ -71,7 +76,7 @@ docker compose up -d
 | Grafana | <http://localhost/grafana/> | lectura anónima; para editar: `admin` / `admin123` |
 | Jupyter Lab | <http://localhost/jupyter/> | token: `parcial123` |
 
-Todas las credenciales están en `.env` (copiado de `.env.example`).
+Todas las credenciales están en `.env.example` y son los valores por defecto de `docker-compose.yml`.
 
 ## Qué hay en cada servicio
 
@@ -120,7 +125,7 @@ docker compose down -v       # además borra los volúmenes (BD, sitio Joomla, l
 ```
 parcial-redes-comunicaciones/
 ├── docker-compose.yml              # orquestación de los 5 servicios, redes y volúmenes
-├── .env.example                    # credenciales por defecto (cp .env.example .env)
+├── .env.example                    # credenciales por defecto (opcional: cp .env.example .env)
 ├── README.md
 ├── INFORME.md                      # documento técnico: topología + análisis OSI + verificación
 ├── nginx/
