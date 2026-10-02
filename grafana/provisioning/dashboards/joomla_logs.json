@@ -1,91 +1,1594 @@
 {
-  "id": null,
-  "uid": "joomla-activity",
-  "title": "Actividad Joomla / PostgreSQL - Parcial COMM",
-  "tags": ["parcial", "comm", "joomla", "postgresql"],
+  "uid": "joomla-logs",
+  "title": "Tráfico HTTP y logs — Nginx / Joomla",
+  "description": "Logs de acceso de Nginx y de Apache (Joomla) leídos desde PostgreSQL (file_fdw).",
+  "tags": [
+    "parcial-comm",
+    "nginx",
+    "joomla",
+    "logs"
+  ],
   "timezone": "browser",
-  "schemaVersion": 39,
-  "version": 2,
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
   "refresh": "10s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "links": [
+    {
+      "title": "PostgreSQL",
+      "type": "dashboards",
+      "tags": [
+        "parcial-comm"
+      ],
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "servicio",
+        "label": "Servicio",
+        "type": "custom",
+        "query": "joomla,jupyter,grafana",
+        "multi": true,
+        "includeAll": true,
+        "allValue": "'joomla','jupyter','grafana'",
+        "current": {
+          "selected": true,
+          "text": [
+            "joomla"
+          ],
+          "value": [
+            "joomla"
+          ]
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "joomla",
+            "value": "joomla"
+          },
+          {
+            "selected": false,
+            "text": "jupyter",
+            "value": "jupyter"
+          },
+          {
+            "selected": false,
+            "text": "grafana",
+            "value": "grafana"
+          }
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
   "panels": [
     {
       "id": 1,
-      "type": "gauge",
-      "title": "Conexiones activas a PostgreSQL (proxy de tráfico HTTP hacia Joomla)",
-      "description": "Cuenta total de conexiones abiertas contra la base de datos en este momento.",
-      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "postgres-joomla" },
+      "type": "row",
+      "title": "Resumen del tráfico que entra por Nginx (puerto 80)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Peticiones",
+      "description": "Total de peticiones HTTP registradas por Nginx en el rango de tiempo.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "postgres-joomla" },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) AS conexiones FROM pg_stat_activity WHERE datname = current_database();",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS v FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio)",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "min": 0,
-          "max": 20,
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 12 }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Peticiones / min",
+      "description": "Promedio de peticiones por minuto en el rango.",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) / GREATEST(EXTRACT(EPOCH FROM ($__timeTo()::timestamptz - $__timeFrom()::timestamptz)) / 60, 1) AS v FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Tasa de error",
+      "description": "Porcentaje de respuestas 4xx + 5xx.",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(100.0 * count(*) FILTER (WHERE status >= 400) / NULLIF(count(*), 0), 0) AS v FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Latencia p95",
+      "description": "Percentil 95 del tiempo total de respuesta medido por Nginx ($request_time).",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY request_time), 0) * 1000 AS v FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1500
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "IPs únicas",
+      "description": "Clientes distintos (IP de origen vista por Nginx).",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(DISTINCT ip) AS v FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#1F9E89",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Datos servidos",
+      "description": "Suma de $body_bytes_sent devueltos a los clientes.",
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(sum(bytes), 0) AS v FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6E5CB6",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Peticiones por código HTTP",
+      "description": "Volumen de peticiones agrupado por clase de estado HTTP (2xx éxito, 3xx redirección, 4xx error del cliente, 5xx error del servidor).",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 16,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(ts, $__interval, 0), clase AS metric, count(*) AS value FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) GROUP BY 1, 2 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 85,
+            "lineWidth": 1,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "spanNulls": true,
+            "axisBorderShow": false,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "piechart",
+      "title": "Clases de respuesta HTTP",
+      "description": "Proporción de respuestas por clase de código de estado HTTP.",
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE clase WHEN '1xx' THEN '1xx · Upgrade WebSocket' WHEN '2xx' THEN '2xx · Éxito' WHEN '3xx' THEN '3xx · Redirección' WHEN '4xx' THEN '4xx · Error cliente' WHEN '5xx' THEN '5xx · Error servidor' ELSE clase END AS \"Clase\", count(*) AS \"Peticiones\" FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) GROUP BY clase ORDER BY clase",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1xx · Upgrade WebSocket"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx · Éxito"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx · Redirección"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx · Error cliente"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx · Error servidor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Latencia de respuesta (p50 / p95 / máx.)",
+      "description": "Tiempo total desde que Nginx recibe la petición hasta que envía el último byte (incluye al upstream).",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(ts, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY request_time) * 1000 AS \"p50\", percentile_cont(0.95) WITHIN GROUP (ORDER BY request_time) * 1000 AS \"p95\", max(request_time) * 1000 AS \"máx.\" FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 18,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "spanNulls": true,
+            "axisBorderShow": false,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "máx."
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Peticiones por servicio (upstream)",
+      "description": "Cómo reparte Nginx el tráfico entre Joomla (/), Jupyter (/jupyter) y Grafana (/grafana). Ignora el filtro de servicio.",
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(ts, $__interval, 0), servicio AS metric, count(*) AS value FROM monitoring.nginx_access WHERE $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 18,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "spanNulls": true,
+            "axisBorderShow": false,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "joomla"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "jupyter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "grafana"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Clientes y recursos más solicitados",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "Top 10 IPs de origen",
+      "description": "IPs recurrentes. En Docker, el tráfico desde el host aparece con la IP del gateway del bridge (NAT).",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 8,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ip AS \"IP\", count(*) AS \"Peticiones\" FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) GROUP BY ip ORDER BY 2 DESC LIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "minVizHeight": 18,
+        "maxVizHeight": 26
+      }
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Rutas más solicitadas",
+      "description": "Top de URLs por número de peticiones, con errores y latencia media.",
+      "gridPos": {
+        "x": 8,
+        "y": 24,
+        "w": 10,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ruta AS \"Ruta\", count(*) AS \"Peticiones\", count(*) FILTER (WHERE status >= 400) AS \"Errores\", round(avg(request_time) * 1000, 1) AS \"Latencia media\", max(ts) AS \"Última\" FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) GROUP BY ruta ORDER BY 2 DESC LIMIT 15",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Peticiones"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Errores"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 10
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Latencia media"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Última"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "piechart",
+      "title": "Tipo de cliente (User-Agent)",
+      "description": "Clasificación del encabezado User-Agent.",
+      "gridPos": {
+        "x": 18,
+        "y": 24,
+        "w": 6,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT cliente AS \"Cliente\", count(*) AS \"Peticiones\" FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) GROUP BY cliente ORDER BY 2 DESC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
           }
         },
         "overrides": []
       },
       "options": {
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
-      "id": 2,
-      "type": "piechart",
-      "title": "Distribución de escrituras (INSERT/UPDATE) por tabla",
-      "description": "Qué tablas de Joomla concentran la actividad generada por el tráfico del CMS.",
-      "gridPos": { "h": 9, "w": 16, "x": 8, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "postgres-joomla" },
+      "id": 16,
+      "type": "row",
+      "title": "Logs de Joomla (Apache dentro del contenedor del CMS)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Peticiones procesadas por Joomla y tiempo de PHP",
+      "description": "Visto desde Apache (log joomla_access.csv): peticiones que llegan al CMS y tiempo medio de procesamiento (%D).",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "postgres-joomla" },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(ts, $__interval, 0), count(*) AS \"Peticiones\" FROM monitoring.joomla_access WHERE $__timeFilter(ts) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(ts, $__interval), avg(duracion_ms) AS \"Tiempo medio Apache/PHP\" FROM monitoring.joomla_access WHERE $__timeFilter(ts) GROUP BY 1 ORDER BY 1",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 85,
+            "lineWidth": 1,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "spanNulls": true,
+            "axisBorderShow": false,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Peticiones"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tiempo medio Apache/PHP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FADE2A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Errores recientes (4xx / 5xx)",
+      "description": "Últimas respuestas con error registradas por Apache dentro del contenedor Joomla.",
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT relname AS tabla, (n_tup_ins + n_tup_upd) AS escrituras FROM pg_stat_user_tables WHERE (n_tup_ins + n_tup_upd) > 0 ORDER BY escrituras DESC LIMIT 8;",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"Hora\", status AS \"Código\", metodo AS \"Método\", ruta AS \"Ruta\", ip AS \"Cliente\", round(duracion_ms, 1) AS \"Duración\" FROM monitoring.joomla_access WHERE $__timeFilter(ts) AND status >= 400 ORDER BY ts DESC LIMIT 50",
           "refId": "A"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "short" },
-        "overrides": []
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Código"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "orange",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 500
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duración"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hora"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocalNoDateIfToday"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^escrituras$/", "values": true },
-        "pieType": "donut",
-        "displayLabels": [],
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
       }
     },
     {
-      "id": 3,
-      "type": "table",
-      "title": "Detalle de sesiones activas en PostgreSQL (estado, aplicación, tiempo de consulta)",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
-      "datasource": { "type": "postgres", "uid": "postgres-joomla" },
+      "id": 19,
+      "type": "logs",
+      "title": "Registro de accesos en vivo (Nginx)",
+      "description": "Las últimas 200 líneas del access log del proxy, coloreadas por severidad.",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres-joomla"
+      },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "postgres-joomla" },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-joomla"
+          },
+          "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT pid, COALESCE(host(client_addr),'local') AS ip, application_name, state, query_start, LEFT(query, 80) AS ultima_consulta FROM pg_stat_activity WHERE datname = current_database() ORDER BY query_start DESC;",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS time, format('%s %s %s → %s [%s] %s ms %s', ip, metodo, uri, status, servicio, round(request_time * 1000), cliente) AS body, CASE WHEN status >= 500 THEN 'error' WHEN status >= 400 THEN 'warning' ELSE 'info' END AS level FROM monitoring.nginx_access WHERE $__timeFilter(ts) AND servicio IN ($servicio) ORDER BY ts DESC LIMIT 200",
           "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": false,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false
+      }
     }
   ]
 }

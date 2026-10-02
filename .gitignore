@@ -1,0 +1,6 @@
+# Credenciales locales (se generan con: cp .env.example .env)
+.env
+
+# Artefactos de Jupyter / Python
+.ipynb_checkpoints/
+__pycache__/

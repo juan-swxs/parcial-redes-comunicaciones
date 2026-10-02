@@ -1,13 +1,15 @@
 apiVersion: 1
 
+# Proveedor de dashboards: Grafana carga al arrancar todos los .json
+# de esta carpeta (montada en /etc/grafana/provisioning/dashboards).
 providers:
   - name: 'Dashboards Parcial COMM'
     orgId: 1
-    folder: ''
+    folder: 'Parcial COMM'
     type: file
-    disableDeletion: false
+    disableDeletion: true
     updateIntervalSeconds: 30
-    allowUiUpdates: true
+    allowUiUpdates: false
     options:
       path: /etc/grafana/provisioning/dashboards
       foldersFromFilesStructure: false

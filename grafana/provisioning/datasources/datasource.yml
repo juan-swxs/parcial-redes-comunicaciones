@@ -1,18 +1,24 @@
 apiVersion: 1
 
+# Datasource PostgreSQL aprovisionado (las credenciales vienen de .env)
+# - Métricas de actividad: vistas pg_stat_*
+# - Logs de Nginx y Joomla: esquema "monitoring" (file_fdw sobre los volúmenes de logs)
 datasources:
   - name: PostgreSQL-Joomla
     uid: postgres-joomla
-    type: postgres
+    type: grafana-postgresql-datasource
     access: proxy
     url: database:5432
     user: $POSTGRES_USER
     isDefault: true
-    editable: true
+    editable: false
     jsonData:
       database: $POSTGRES_DB
       sslmode: "disable"
       postgresVersion: 1600
       timescaledb: false
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
     secureJsonData:
       password: $POSTGRES_PASSWORD

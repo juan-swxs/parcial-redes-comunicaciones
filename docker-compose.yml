@@ -1,15 +1,24 @@
 name: parcial-redes-comunicaciones
 
+# =================================================================
+# Redes (Capa 2/3): dos puentes Linux independientes
+# =================================================================
 networks:
   frontend_net:
     driver: bridge
   backend_net:
     driver: bridge
+    internal: true       # sin gateway hacia el exterior: la BD no ve internet ni el host
 
+# =================================================================
+# Volúmenes nombrados (persistencia + logs compartidos)
+# =================================================================
 volumes:
-  postgres_data:
-  joomla_data:
-  nginx_logs:
+  postgres_data:         # /var/lib/postgresql/data
+  joomla_data:           # assets/código del CMS (/var/www/html)
+  nginx_logs:            # access.csv del proxy  -> PostgreSQL / Grafana
+  joomla_logs:           # joomla_access.csv de Apache -> PostgreSQL / Grafana
+  grafana_data:          # estado interno de Grafana (sesiones, preferencias)
 
 services:
 
@@ -27,6 +36,11 @@ services:
       - nginx_logs:/var/log/nginx
     networks:
       - frontend_net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       joomla:
         condition: service_started
@@ -49,15 +63,23 @@ services:
       JOOMLA_DB_USER: ${JOOMLA_DB_USER}
       JOOMLA_DB_PASSWORD: ${JOOMLA_DB_PASSWORD}
       JOOMLA_SITE_NAME: ${JOOMLA_SITE_NAME}
-      JOOMLA_ADMIN_USER: "Administrador Parcial"
-      JOOMLA_ADMIN_USERNAME: admin
-      JOOMLA_ADMIN_PASSWORD: AdminParcial123!
-      JOOMLA_ADMIN_EMAIL: admin@parcial.local
+      JOOMLA_ADMIN_USER: ${JOOMLA_ADMIN_USER}
+      JOOMLA_ADMIN_USERNAME: ${JOOMLA_ADMIN_USERNAME}
+      JOOMLA_ADMIN_PASSWORD: ${JOOMLA_ADMIN_PASSWORD}
+      JOOMLA_ADMIN_EMAIL: ${JOOMLA_ADMIN_EMAIL}
     volumes:
       - joomla_data:/var/www/html
+      - joomla_logs:/var/log/apache2                      # logs exportados
+      - ./joomla/apache-logs.conf:/etc/apache2/conf-enabled/zz-parcial-logs.conf:ro
     networks:
       - frontend_net
       - backend_net
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
     depends_on:
       database:
         condition: service_healthy
@@ -75,8 +97,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro    # esquema "monitoring"
+      - nginx_logs:/logs/nginx:ro                         # logs leídos con file_fdw
+      - joomla_logs:/logs/joomla:ro
     networks:
-      - backend_net        # sin visibilidad hacia frontend_net ni el host
+      - backend_net        # sólo red interna: sin visibilidad hacia frontend_net ni el host
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -93,7 +118,12 @@ services:
       dockerfile: Dockerfile
     container_name: jupyter_lab
     restart: unless-stopped
-    command: ["start-notebook.py", "--ServerApp.base_url=/jupyter/", "--ServerApp.allow_origin=*"]
+    command:
+      - start-notebook.py
+      - --ServerApp.base_url=/jupyter/
+      - --ServerApp.allow_origin=*
+      - --ServerApp.root_dir=/home/jovyan/work
+      - --LabApp.default_url=/lab/tree/analisis_datos.ipynb
     environment:
       JUPYTER_TOKEN: ${JUPYTER_TOKEN}
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -102,7 +132,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./jupyter/notebooks:/home/jovyan/work
+      - ./jupyter/notebooks:/home/jovyan/work             # cuaderno precargado (bind-mount)
     networks:
       - frontend_net
       - backend_net       # necesita consultar PostgreSQL directamente
@@ -122,14 +152,30 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
       GF_SERVER_ROOT_URL: ${GF_SERVER_ROOT_URL}
       GF_SERVER_SERVE_FROM_SUB_PATH: ${GF_SERVER_SERVE_FROM_SUB_PATH}
+      GF_AUTH_ANONYMOUS_ENABLED: ${GF_AUTH_ANONYMOUS_ENABLED}
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/joomla_logs.json
+      GF_USERS_DEFAULT_THEME: dark
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+      - nginx_logs:/var/log/nginx:ro                      # acceso directo a los logs
+      - joomla_logs:/var/log/joomla:ro
     networks:
       - frontend_net
-      - backend_net       # consulta métricas directas de la BD
+      - backend_net       # consulta la BD (métricas + logs vía file_fdw)
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     depends_on:
       database:
         condition: service_healthy

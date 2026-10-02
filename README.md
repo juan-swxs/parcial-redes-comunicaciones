@@ -4,12 +4,12 @@ Comunicaciones · Ingeniería Mecatrónica · Universidad Militar Nueva Granada
 
 Stack de 5 servicios orquestados con Docker Compose: **Nginx** (reverse proxy) →
 **Joomla** (CMS) + **PostgreSQL** (persistencia) + **Jupyter** (análisis de datos) +
-**Grafana** (dashboards), con aprovisionamiento 100% automático.
+**Grafana** (dashboards), con aprovisionamiento 100 % automático.
 
 ## Requisitos
 
-- Docker Engine 24+ (con el plugin `docker compose`, no el binario viejo `docker-compose`)
-- En Linux, verifica con:
+- Docker Engine 24+ con el plugin `docker compose` (no el binario viejo `docker-compose`).
+- Puerto **80** libre en el host.
 
 ```bash
 docker --version
@@ -28,53 +28,87 @@ sudo usermod -aG docker $USER   # cierra sesión y vuelve a entrar para que apli
 ## Arranque (zero-touch)
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
+git clone https://github.com/juan-swxs/parcial-redes-comunicaciones.git
 cd parcial-redes-comunicaciones
 cp .env.example .env
 docker compose up -d
 ```
 
-Eso es todo. Nadie necesita entrar a la UI de Grafana ni subir el notebook a mano:
-todo queda provisionado por los volúmenes y archivos de configuración del repositorio.
+Eso es todo. No hay que crear datasources o dashboards en Grafana ni subir el notebook:
+todo queda provisionado por los archivos del repositorio.
 
-### Ver el estado de los contenedores
+El primer arranque descarga las imágenes y construye la de Jupyter (2–4 min). Joomla
+necesita ~1 min más para instalarse contra PostgreSQL. Comprueba que los 5 servicios
+estén `healthy`:
 
 ```bash
 docker compose ps
-docker compose logs -f          # todos los servicios
-docker compose logs -f joomla   # uno en particular
+docker compose logs -f nginx    # access log legible en vivo
 ```
-
-Espera ~30-60s a que Joomla termine su instalación desatendida contra PostgreSQL
-(el healthcheck de `database` con `pg_isready` evita que Joomla arranque antes de tiempo).
 
 ## Accesos (todo a través del puerto 80 de Nginx)
 
 | Servicio | URL | Credenciales |
 |---|---|---|
-| Joomla (portal) | http://localhost/ | admin / AdminParcial123! |
-| Jupyter Lab | http://localhost/jupyter/ | token: `parcial123` (ver `.env`) |
-| Grafana | http://localhost/grafana/ | admin / admin123 (ver `.env`) |
+| Joomla (portal) | <http://localhost/> | admin del sitio: `admin` / `AdminParcial123!` (<http://localhost/administrator/>) |
+| Grafana | <http://localhost/grafana/> | lectura anónima; para editar: `admin` / `admin123` |
+| Jupyter Lab | <http://localhost/jupyter/> | token: `parcial123` |
+
+Todas las credenciales están en `.env` (copiado de `.env.example`).
+
+## Qué hay en cada servicio
+
+**Grafana** (carpeta *Parcial COMM*, se refresca cada 10 s):
+
+- *Tráfico HTTP y logs — Nginx / Joomla* (página de inicio): peticiones, peticiones/min,
+  tasa de error, latencia p95, IPs únicas y bytes; peticiones por código HTTP; latencia
+  p50/p95/máx.; tráfico por servicio; top IPs; rutas más solicitadas; user-agents; log de
+  Apache de Joomla; errores recientes y un visor de logs en vivo.
+- *PostgreSQL — Actividad de la base de datos*: conexiones, tamaño, cache hit, escrituras
+  por tabla y sesiones activas.
+
+**Jupyter** abre directamente `analisis_datos.ipynb`. Con *Run → Run All Cells* se ejecutan
+sus secciones: conexión, red del contenedor (DNS/ARP), generación de tráfico, análisis del
+log de Nginx, análisis del log de Apache, actividad de PostgreSQL y resumen.
+
+### ¿Cómo llegan los logs a Grafana?
+
+```
+nginx  ──► access.csv         (volumen nginx_logs)  ─┐
+joomla ──► joomla_access.csv  (volumen joomla_logs) ─┴─► montados :ro en PostgreSQL
+                                                          file_fdw → esquema "monitoring"
+                                                          ──► Grafana y Jupyter (SQL)
+```
+
+Los detalles están en `INFORME.md`, sección 1.2.
 
 ## Apagar y limpiar
 
 ```bash
 docker compose down          # detiene y elimina contenedores, conserva volúmenes
-docker compose down -v       # además borra los volúmenes (BD, sitio Joomla) — reinicia todo desde cero
+docker compose down -v       # además borra los volúmenes (BD, sitio Joomla, logs) — reinicia desde cero
 ```
+
+> El esquema `monitoring` se crea al **inicializar** el volumen de PostgreSQL. Si
+> levantaste una versión anterior del proyecto, usa `docker compose down -v` antes de
+> `docker compose up -d`.
 
 ## Estructura del repositorio
 
 ```
 parcial-redes-comunicaciones/
-├── docker-compose.yml
-├── .env.example
+├── docker-compose.yml              # orquestación de los 5 servicios, redes y volúmenes
+├── .env.example                    # credenciales por defecto (cp .env.example .env)
 ├── README.md
-├── INFORME.md
+├── INFORME.md                      # documento técnico: topología + análisis OSI + verificación
 ├── nginx/
-│   └── default.conf
+│   └── default.conf                # proxy inverso, WebSockets, log CSV
+├── joomla/
+│   └── apache-logs.conf            # log CSV de Apache + mod_remoteip
+├── database/
+│   └── init/01-monitoring.sql      # file_fdw + vistas monitoring.nginx_access / joomla_access
 ├── jupyter/
-│   ├── Dockerfile
+│   ├── Dockerfile                  # minimal-notebook + psycopg2, SQLAlchemy, pandas, matplotlib
 │   └── notebooks/
 │       └── analisis_datos.ipynb
 └── grafana/
@@ -82,14 +116,6 @@ parcial-redes-comunicaciones/
         ├── datasources/datasource.yml
         └── dashboards/
             ├── dashboard.yml
-            └── joomla_logs.json
+            ├── joomla_logs.json
+            └── postgres_actividad.json
 ```
-
-## Notas técnicas rápidas
-
-- **Joomla** se instala de forma desatendida usando las variables `JOOMLA_ADMIN_*` y
-  `JOOMLA_DB_*` que reconoce la imagen oficial — no hay que pasar por el asistente web.
-- **Grafana** consulta directamente las vistas internas de PostgreSQL
-  (`pg_stat_activity`, `pg_stat_user_tables`), así que las gráficas de actividad
-  funcionan sin depender del prefijo de tablas aleatorio que genera Joomla.
-- Ver `INFORME.md` para el análisis completo del modelo OSI de esta arquitectura.
