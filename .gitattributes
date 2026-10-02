@@ -1,0 +1,10 @@
+# Todos los archivos de texto se guardan y se extraen con finales de línea LF,
+# incluso en Windows (core.autocrlf=true). Los scripts y configuraciones se
+# ejecutan dentro de contenedores Linux, donde un CRLF rompe, por ejemplo,
+# joomla/seed/start.sh ("apache2-foreground\r: not found").
+* text=auto eol=lf
+
+# Binarios: sin conversión
+*.png binary
+*.jpg binary
+*.ico binary
