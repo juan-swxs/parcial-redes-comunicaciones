@@ -67,9 +67,14 @@ Todas las credenciales están en `.env` (copiado de `.env.example`).
 - *PostgreSQL — Actividad de la base de datos*: conexiones, tamaño, cache hit, escrituras
   por tabla y sesiones activas.
 
+**Joomla** arranca con la portada ya poblada: banner, 7 artículos del proyecto con
+imágenes, accesos rápidos y menú hacia Grafana/Jupyter. Lo crea `joomla/seed/seed.php`
+la primera vez, sin pasos manuales.
+
 **Jupyter** abre directamente `analisis_datos.ipynb`. Con *Run → Run All Cells* se ejecutan
-sus secciones: conexión, red del contenedor (DNS/ARP), generación de tráfico, análisis del
-log de Nginx, análisis del log de Apache, actividad de PostgreSQL y resumen.
+sus secciones, con gráficas interactivas (Plotly) y tablas con búsqueda y orden (itables):
+conexión, topología real de la red (DNS/ARP), generación de tráfico, análisis del log de
+Nginx con un explorador de logs filtrable, log de Apache, actividad de PostgreSQL y resumen.
 
 ### ¿Cómo llegan los logs a Grafana?
 
@@ -104,11 +109,12 @@ parcial-redes-comunicaciones/
 ├── nginx/
 │   └── default.conf                # proxy inverso, WebSockets, log CSV
 ├── joomla/
-│   └── apache-logs.conf            # log CSV de Apache + mod_remoteip
+│   ├── apache-logs.conf            # log CSV de Apache + mod_remoteip
+│   └── seed/                       # contenido inicial de la portada (start.sh + seed.php)
 ├── database/
 │   └── init/01-monitoring.sql      # file_fdw + vistas monitoring.nginx_access / joomla_access
 ├── jupyter/
-│   ├── Dockerfile                  # minimal-notebook + psycopg2, SQLAlchemy, pandas, matplotlib
+│   ├── Dockerfile                  # minimal-notebook + psycopg2, SQLAlchemy, pandas, Plotly, itables
 │   └── notebooks/
 │       └── analisis_datos.ipynb
 └── grafana/

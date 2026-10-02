@@ -40,7 +40,7 @@ flowchart TB
 | Contenedor | Imagen | Redes | Puerto interno | Volúmenes |
 |---|---|---|---|---|
 | `nginx` | `nginx:alpine` | frontend_net | 80 (**publicado 80:80**) | `nginx/default.conf` (bind), `nginx_logs` |
-| `joomla` | `joomla:latest` | frontend_net, backend_net | 80 | `joomla_data` (assets), `joomla_logs`, `joomla/apache-logs.conf` (bind) |
+| `joomla` | `joomla:latest` | frontend_net, backend_net | 80 | `joomla_data` (assets), `joomla_logs`, `joomla/apache-logs.conf` y `joomla/seed/` (bind) |
 | `database` | `postgres:16-alpine` | **sólo** backend_net | 5432 | `postgres_data` → `/var/lib/postgresql/data`, `database/init` (bind), logs `:ro` |
 | `jupyter` | build de `jupyter/minimal-notebook` | frontend_net, backend_net | 8888 | `./jupyter/notebooks` → `/home/jovyan/work` (bind) |
 | `grafana` | `grafana/grafana:latest` | frontend_net, backend_net | 3000 | `grafana/provisioning` (bind), `grafana_data`, logs `:ro` |
@@ -266,8 +266,11 @@ docker compose ps        # esperar a que los 5 servicios estén "healthy"
 ```
 
 1. **Abrir el portal Joomla a través de Nginx y generar tráfico**
-   - Abrir <http://localhost/> y navegar por varias páginas, por ejemplo
-     <http://localhost/index.php/component/users/login> y una ruta inexistente como
+   - Abrir <http://localhost/>. La portada ya trae contenido: un banner, 7 artículos sobre
+     el proyecto con imágenes y accesos rápidos a Grafana y Jupyter. Lo carga
+     automáticamente `joomla/seed/seed.php` al terminar la instalación desatendida.
+   - Navegar por varias páginas (por ejemplo los artículos,
+     <http://localhost/index.php/component/users/login>) y por una ruta inexistente como
      <http://localhost/no-existe> para producir un 404.
    - Opcional, desde la terminal:
      ```bash
@@ -295,15 +298,22 @@ docker compose ps        # esperar a que los 5 servicios estén "healthy"
    - Abrir <http://localhost/jupyter/> e introducir el token `parcial123` (`JUPYTER_TOKEN`
      en `.env`). JupyterLab abre directamente `analisis_datos.ipynb`.
    - Ejecutar **Run → Run All Cells**. El indicador del kernel debe quedar en *Idle*, lo que
-     confirma que el WebSocket atraviesa Nginx. El cuaderno:
+     confirma que el WebSocket atraviesa Nginx. Las gráficas son interactivas (Plotly) y las
+     tablas permiten buscar y ordenar (itables). El cuaderno:
      1. se conecta a PostgreSQL y muestra las IPs del servidor y del cliente;
-     2. muestra el DNS `127.0.0.11`, la resolución de los servicios y la tabla ARP;
+     2. dibuja la topología real del despliegue con las IPs resueltas por el DNS
+        `127.0.0.11` y muestra la tabla ARP del contenedor;
      3. genera tráfico de demostración a través de `http://nginx/`;
-     4. grafica peticiones por minuto, códigos HTTP, top IPs y la distribución de latencias
-        a partir del log de Nginx;
-     5. analiza el log de Apache (cliente real vs. proxy y tiempo de PHP por ruta);
-     6. grafica las escrituras por tabla de Joomla y las conexiones a PostgreSQL;
-     7. imprime un resumen.
+     4. a partir del log de Nginx muestra indicadores clave, una línea de tiempo con selector
+        de rango, un *sunburst* servicio → clase → código, la distribución de latencias y un
+        ranking conmutable (IPs / rutas / user-agents);
+     5. ofrece un **explorador de logs** con filtros (servicio, clase, texto) que actualiza
+        una gráfica y una tabla al instante;
+     6. analiza el log de Apache (duración PHP por ruta y diagrama de flujo cliente → Nginx
+        → Joomla);
+     7. muestra indicadores de PostgreSQL, un mapa de tablas (*treemap*), las escrituras por
+        tabla y las sesiones abiertas;
+     8. cierra con un resumen en tarjetas.
 
 4. **Verificación del aislamiento de red (sustenta la Sección 2.3)**
    ```bash

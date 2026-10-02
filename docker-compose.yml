@@ -56,6 +56,9 @@ services:
     image: joomla:latest
     container_name: joomla_cms
     restart: unless-stopped
+    # start.sh lanza el seeder de contenido y luego ejecuta el entrypoint oficial
+    entrypoint: ["/bin/bash", "/opt/parcial/start.sh"]
+    command: ["apache2-foreground"]
     environment:
       JOOMLA_DB_HOST: ${JOOMLA_DB_HOST}
       JOOMLA_DB_TYPE: ${JOOMLA_DB_TYPE}
@@ -71,6 +74,7 @@ services:
       - joomla_data:/var/www/html
       - joomla_logs:/var/log/apache2                      # logs exportados
       - ./joomla/apache-logs.conf:/etc/apache2/conf-enabled/zz-parcial-logs.conf:ro
+      - ./joomla/seed:/opt/parcial:ro                     # contenido inicial de la portada
     networks:
       - frontend_net
       - backend_net
