@@ -46,6 +46,23 @@ docker compose ps
 docker compose logs -f nginx    # access log legible en vivo
 ```
 
+### En Windows o macOS
+
+Funciona igual con **Docker Desktop** (en Windows, con el backend WSL 2 activado):
+
+```powershell
+git clone https://github.com/juan-swxs/parcial-redes-comunicaciones.git
+cd parcial-redes-comunicaciones
+copy .env.example .env          # en PowerShell también sirve: Copy-Item .env.example .env
+docker compose up -d
+```
+
+- El repositorio incluye `.gitattributes`, que obliga a usar finales de línea **LF** aunque
+  Git para Windows convierta a CRLF por defecto. Sin él, `joomla/seed/start.sh` fallaría
+  dentro del contenedor Linux.
+- Si el puerto 80 está ocupado (IIS, *World Wide Web Publishing Service*, otro servidor
+  web), libéralo o detén ese servicio antes de `docker compose up -d`.
+
 ## Accesos (todo a través del puerto 80 de Nginx)
 
 | Servicio | URL | Credenciales |
