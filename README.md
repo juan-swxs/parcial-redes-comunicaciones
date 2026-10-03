@@ -123,9 +123,9 @@ docker compose down          # detiene y elimina contenedores, conserva volúmen
 docker compose down -v       # además borra los volúmenes (BD, sitio Joomla, logs) — reinicia desde cero
 ```
 
-> El esquema `monitoring` se crea al **inicializar** el volumen de PostgreSQL. Si
-> levantaste una versión anterior del proyecto, usa `docker compose down -v` antes de
-> `docker compose up -d`.
+> El esquema `monitoring` (vistas de logs) se crea al inicializar el volumen de PostgreSQL
+> y, además, `database/scripts/start.sh` lo vuelve a verificar en cada arranque. Así
+> funciona aunque el volumen venga de una versión anterior del proyecto.
 
 ## Estructura del repositorio
 

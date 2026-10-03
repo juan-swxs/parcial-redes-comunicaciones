@@ -41,7 +41,7 @@ flowchart TB
 |---|---|---|---|---|
 | `nginx` | `nginx:alpine` | frontend_net | 80 (**publicado 80:80**) | carpeta `nginx/` (bind, contiene `default.conf`), `nginx_logs` |
 | `joomla` | `joomla:latest` | frontend_net, backend_net | 80 | `joomla_data` (assets), `joomla_logs`, carpeta `joomla/` (bind: `apache-logs.conf` + `seed/`) |
-| `database` | `postgres:16-alpine` | **sólo** backend_net | 5432 | `postgres_data` → `/var/lib/postgresql/data`, `database/init` (bind), logs `:ro` |
+| `database` | `postgres:16-alpine` | **sólo** backend_net | 5432 | `postgres_data` → `/var/lib/postgresql/data`, carpeta `database/` (bind: `init/` + `scripts/`), logs `:ro` |
 | `jupyter` | build de `jupyter/minimal-notebook` | frontend_net, backend_net | 8888 | `./jupyter/notebooks` → `/home/jovyan/work` (bind) |
 | `grafana` | `grafana/grafana:latest` | frontend_net, backend_net | 3000 | `grafana/provisioning` (bind), `grafana_data`, logs `:ro` |
 
@@ -82,7 +82,8 @@ archivo CSV como si fuera una tabla:
    petición, código, bytes, duración en microsegundos (`%D`), referer y user-agent.
 3. **PostgreSQL** monta ambos volúmenes en sólo lectura (`/logs/nginx`, `/logs/joomla`).
    El script `database/init/01-monitoring.sql`, ejecutado automáticamente por
-   `docker-entrypoint-initdb.d` al inicializar la base, crea:
+   `docker-entrypoint-initdb.d` al inicializar la base y vuelto a aplicar en cada arranque
+   por `database/scripts/start.sh` (es idempotente), crea:
    - las tablas foráneas `monitoring.nginx_access_raw` y `monitoring.joomla_access_raw`;
    - las vistas tipadas `monitoring.nginx_access` y `monitoring.joomla_access`, que
      convierten el epoch a `timestamptz`, el status a entero, calculan la clase (`2xx`,

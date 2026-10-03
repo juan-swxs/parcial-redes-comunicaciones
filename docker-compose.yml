@@ -99,6 +99,9 @@ services:
     image: postgres:16-alpine
     container_name: postgres_db
     restart: unless-stopped
+    # start.sh re-aplica database/init/*.sql en cada arranque (también con volúmenes antiguos)
+    entrypoint: ["/bin/bash", "/opt/parcial-db/scripts/start.sh"]
+    command: ["postgres"]
     environment:
       POSTGRES_DB: "${POSTGRES_DB:-joomladb}"
       POSTGRES_USER: "${POSTGRES_USER:-joomla_user}"
@@ -106,6 +109,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d:ro    # esquema "monitoring"
+      - ./database:/opt/parcial-db:ro                     # scripts/start.sh
       - nginx_logs:/logs/nginx:ro                         # logs leídos con file_fdw
       - joomla_logs:/logs/joomla:ro
     networks:

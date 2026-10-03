@@ -9,8 +9,8 @@
 -- file_fdw los lee en cada consulta, así Grafana y Jupyter ven el
 -- tráfico en tiempo (casi) real.
 --
--- Se ejecuta automáticamente sólo la primera vez que se inicializa el
--- volumen de datos (docker-entrypoint-initdb.d).
+-- Se ejecuta al inicializar el volumen (docker-entrypoint-initdb.d) y, además,
+-- en cada arranque mediante database/scripts/start.sh (es idempotente).
 -- =========================================================
 
 CREATE EXTENSION IF NOT EXISTS file_fdw;
