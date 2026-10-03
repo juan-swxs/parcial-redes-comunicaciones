@@ -6,7 +6,9 @@
 -- en modo sólo lectura en este contenedor:
 --   nginx_logs  -> /logs/nginx/access.csv
 --   joomla_logs -> /logs/joomla/joomla_access.csv
--- file_fdw los lee en cada consulta, así Grafana y Jupyter ven el
+-- file_fdw los lee en cada consulta (a través del filtro
+-- database/scripts/leer-log.sh, que descarta bytes nulos y líneas
+-- dañadas), así Grafana y Jupyter ven el
 -- tráfico en tiempo (casi) real.
 --
 -- Se ejecuta al inicializar el volumen (docker-entrypoint-initdb.d) y, además,
@@ -18,10 +20,16 @@ CREATE SERVER IF NOT EXISTS logs_fs FOREIGN DATA WRAPPER file_fdw;
 
 CREATE SCHEMA IF NOT EXISTS monitoring;
 
+-- Todo lo siguiente se recrea en cada arranque, en una sola transacción, para que
+-- los despliegues existentes también reciban los cambios (no hay datos guardados:
+-- las tablas sólo leen los archivos de log).
+BEGIN;
+DROP FOREIGN TABLE IF EXISTS monitoring.nginx_access_raw, monitoring.joomla_access_raw CASCADE;
+
 -- ---------------------------------------------------------
 -- Tablas "crudas" (todo texto: una línea rara no rompe el parseo)
 -- ---------------------------------------------------------
-CREATE FOREIGN TABLE IF NOT EXISTS monitoring.nginx_access_raw (
+CREATE FOREIGN TABLE monitoring.nginx_access_raw (
     epoch          text,
     ip             text,
     servicio       text,
@@ -36,9 +44,10 @@ CREATE FOREIGN TABLE IF NOT EXISTS monitoring.nginx_access_raw (
     referer        text,
     user_agent     text
 ) SERVER logs_fs
-  OPTIONS (filename '/logs/nginx/access.csv', format 'csv', quote '"', escape '\');
+  OPTIONS (program 'sh /opt/parcial-db/scripts/leer-log.sh /logs/nginx/access.csv 13',
+           format 'csv', quote '"', escape '\');
 
-CREATE FOREIGN TABLE IF NOT EXISTS monitoring.joomla_access_raw (
+CREATE FOREIGN TABLE monitoring.joomla_access_raw (
     epoch_ms     text,
     ip           text,
     ip_proxy     text,
@@ -49,7 +58,8 @@ CREATE FOREIGN TABLE IF NOT EXISTS monitoring.joomla_access_raw (
     referer      text,
     user_agent   text
 ) SERVER logs_fs
-  OPTIONS (filename '/logs/joomla/joomla_access.csv', format 'csv', quote '"', escape '\');
+  OPTIONS (program 'sh /opt/parcial-db/scripts/leer-log.sh /logs/joomla/joomla_access.csv 9',
+           format 'csv', quote '"', escape '\');
 
 -- ---------------------------------------------------------
 -- Vistas tipadas listas para Grafana / Jupyter
@@ -102,3 +112,5 @@ WHERE epoch_ms ~ '^[0-9]+$' AND status ~ '^[0-9]{3}$';
 
 COMMENT ON VIEW monitoring.nginx_access  IS 'Log de acceso del proxy Nginx (todas las peticiones HTTP que entran por el puerto 80)';
 COMMENT ON VIEW monitoring.joomla_access IS 'Log de acceso de Apache dentro del contenedor Joomla (peticiones que llegan al CMS)';
+
+COMMIT;
