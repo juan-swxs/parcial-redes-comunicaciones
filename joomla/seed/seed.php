@@ -55,6 +55,9 @@ if (!$db) {
 $st = $db->prepare("SELECT 1 FROM {$p}content WHERE alias = ?");
 $st->execute([MARKER_ALIAS]);
 if ($st->fetchColumn()) {
+    // Portadas creadas por versiones anteriores mencionaban el token de Jupyter (ya no se usa)
+    $db->exec("UPDATE {$p}content SET \"fulltext\" = replace(\"fulltext\", ' (token <code>parcial123</code>)', '')
+               WHERE \"fulltext\" LIKE '%parcial123%'");
     logmsg('El contenido de la portada ya existe; nada que hacer.');
     exit(0);
 }
@@ -180,7 +183,7 @@ HTML,
 <ul>
   <li>Navegar por los artículos para generar tráfico HTTP real.</li>
   <li>Abrir <a href="/grafana/">Grafana</a> y ver cómo aparecen tus peticiones en menos de 10 segundos.</li>
-  <li>Abrir <a href="/jupyter/">Jupyter Lab</a> (token <code>parcial123</code>) y ejecutar el cuaderno <em>analisis_datos.ipynb</em>.</li>
+  <li>Abrir <a href="/jupyter/">Jupyter Lab</a> y ejecutar el cuaderno <em>analisis_datos.ipynb</em>.</li>
 </ul>
 HTML,
     ],

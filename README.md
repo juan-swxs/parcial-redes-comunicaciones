@@ -81,7 +81,7 @@ docker compose up -d
 |---|---|---|
 | Joomla (portal) | <http://localhost/> | admin del sitio: `admin` / `AdminParcial123!` (<http://localhost/administrator/>) |
 | Grafana | <http://localhost/grafana/> | lectura anónima; para editar: `admin` / `admin123` |
-| Jupyter Lab | <http://localhost/jupyter/> | token: `parcial123` |
+| Jupyter Lab | <http://localhost/jupyter/> | sin credenciales (opcional: `JUPYTER_TOKEN` en `.env`) |
 
 Todas las credenciales están en `.env.example` y son los valores por defecto de `docker-compose.yml`.
 

@@ -299,7 +299,7 @@ resultante contiene los mismos valores que los predeterminados de `docker-compos
      sources* y en la carpeta *Parcial COMM*, marcados como provisionados.
 
 3. **Acceder a Jupyter y ejecutar el cuaderno**
-   - Abrir <http://localhost/jupyter/> e introducir el token `parcial123` (`JUPYTER_TOKEN`
+   - Abrir <http://localhost/jupyter/> (entra sin token; se puede exigir uno definiendo `JUPYTER_TOKEN`
      en `.env`). JupyterLab abre directamente `analisis_datos.ipynb`.
    - Ejecutar **Run → Run All Cells**. El indicador del kernel debe quedar en *Idle*, lo que
      confirma que el WebSocket atraviesa Nginx. Las gráficas son interactivas (Plotly) y las

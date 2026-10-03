@@ -136,8 +136,10 @@ services:
       - --ServerApp.allow_origin=*
       - --ServerApp.root_dir=/home/jovyan/work
       - --LabApp.default_url=/lab/tree/analisis_datos.ipynb
+      # Sin token por defecto: se entra directo por http://localhost/jupyter/.
+      # Para exigir uno, define JUPYTER_TOKEN en un archivo .env.
+      - --IdentityProvider.token=${JUPYTER_TOKEN:-}
     environment:
-      JUPYTER_TOKEN: "${JUPYTER_TOKEN:-parcial123}"
       POSTGRES_HOST: "${POSTGRES_HOST:-database}"
       POSTGRES_PORT: "${POSTGRES_PORT:-5432}"
       POSTGRES_DB: "${POSTGRES_DB:-joomladb}"
