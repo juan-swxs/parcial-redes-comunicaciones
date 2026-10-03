@@ -65,6 +65,13 @@ docker compose up -d
 - El repositorio incluye `.gitattributes`, que obliga a usar finales de línea **LF** aunque
   Git para Windows convierta a CRLF por defecto. Sin él, `joomla/seed/start.sh` fallaría
   dentro del contenedor Linux.
+- `docker-compose.yml` sólo monta **carpetas** del repositorio, nunca archivos sueltos.
+  Si un archivo montado no existe todavía, Docker Desktop crea en su lugar una carpeta
+  vacía con ese nombre, y el contenedor falla con *"Are you trying to mount a directory
+  onto a file?"*. Si te ocurrió con una versión anterior del proyecto, ejecuta
+  `docker compose down`, borra la carpeta vacía (por ejemplo
+  `Remove-Item -Recurse -Force nginx\default.conf`), recupérala con
+  `git checkout -- nginx/default.conf` y vuelve a ejecutar `docker compose up -d`.
 - Si el puerto 80 está ocupado (IIS, *World Wide Web Publishing Service*, otro servidor
   web), libéralo o detén ese servicio antes de `docker compose up -d`.
 

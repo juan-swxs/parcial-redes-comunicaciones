@@ -36,7 +36,7 @@ services:
     ports:
       - "80:80"          # único contenedor con puerto publicado al host
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx:/etc/nginx/conf.d:ro                     # carpeta (no archivo suelto): ver nota en README
       - nginx_logs:/var/log/nginx
     networks:
       - frontend_net
@@ -60,8 +60,9 @@ services:
     image: joomla:latest
     container_name: joomla_cms
     restart: unless-stopped
-    # start.sh lanza el seeder de contenido y luego ejecuta el entrypoint oficial
-    entrypoint: ["/bin/bash", "/opt/parcial/start.sh"]
+    # start.sh activa el log CSV de Apache, lanza el seeder de contenido y luego
+    # ejecuta el entrypoint oficial
+    entrypoint: ["/bin/bash", "/opt/parcial/seed/start.sh"]
     command: ["apache2-foreground"]
     environment:
       JOOMLA_DB_HOST: "${JOOMLA_DB_HOST:-database}"
@@ -77,8 +78,7 @@ services:
     volumes:
       - joomla_data:/var/www/html
       - joomla_logs:/var/log/apache2                      # logs exportados
-      - ./joomla/apache-logs.conf:/etc/apache2/conf-enabled/zz-parcial-logs.conf:ro
-      - ./joomla/seed:/opt/parcial:ro                     # contenido inicial de la portada
+      - ./joomla:/opt/parcial:ro                          # apache-logs.conf + seed/ (portada)
     networks:
       - frontend_net
       - backend_net

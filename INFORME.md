@@ -39,8 +39,8 @@ flowchart TB
 
 | Contenedor | Imagen | Redes | Puerto interno | Volúmenes |
 |---|---|---|---|---|
-| `nginx` | `nginx:alpine` | frontend_net | 80 (**publicado 80:80**) | `nginx/default.conf` (bind), `nginx_logs` |
-| `joomla` | `joomla:latest` | frontend_net, backend_net | 80 | `joomla_data` (assets), `joomla_logs`, `joomla/apache-logs.conf` y `joomla/seed/` (bind) |
+| `nginx` | `nginx:alpine` | frontend_net | 80 (**publicado 80:80**) | carpeta `nginx/` (bind, contiene `default.conf`), `nginx_logs` |
+| `joomla` | `joomla:latest` | frontend_net, backend_net | 80 | `joomla_data` (assets), `joomla_logs`, carpeta `joomla/` (bind: `apache-logs.conf` + `seed/`) |
 | `database` | `postgres:16-alpine` | **sólo** backend_net | 5432 | `postgres_data` → `/var/lib/postgresql/data`, `database/init` (bind), logs `:ro` |
 | `jupyter` | build de `jupyter/minimal-notebook` | frontend_net, backend_net | 8888 | `./jupyter/notebooks` → `/home/jovyan/work` (bind) |
 | `grafana` | `grafana/grafana:latest` | frontend_net, backend_net | 3000 | `grafana/provisioning` (bind), `grafana_data`, logs `:ro` |
@@ -75,7 +75,8 @@ archivo CSV como si fuera una tabla:
    En paralelo, envía una línea legible a `stdout` para `docker compose logs nginx`.
    > En la imagen oficial `access.log` es un *symlink* a `/dev/stdout`; por eso se usa un
    > archivo con nombre propio, que sí queda persistido en el volumen.
-2. **Joomla (Apache)** carga `joomla/apache-logs.conf`, que usa `GlobalLog` para escribir
+2. **Joomla (Apache)** carga `joomla/apache-logs.conf` (`start.sh` lo enlaza en
+   `conf-enabled/` al arrancar), que usa `GlobalLog` para escribir
    `/var/log/apache2/joomla_access.csv` (volumen `joomla_logs`): epoch en ms, IP del cliente
    real (recuperada de `X-Forwarded-For` con `mod_remoteip`), IP del proxy, línea de
    petición, código, bytes, duración en microsegundos (`%D`), referer y user-agent.
